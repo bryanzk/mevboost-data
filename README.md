@@ -1,4 +1,3 @@
-#test
 
 # MEV-Boost Winning Bid Data
 
