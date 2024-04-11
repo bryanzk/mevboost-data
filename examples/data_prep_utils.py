@@ -57,9 +57,17 @@ def get_raw_block_data_with_winning_bids():
 
 
     
-def get_block_data_with_winning_bids():
+def get_block_data_with_winning_bids_having_bid_ts():
     # Load winning bid block history data
     df = get_raw_block_data_with_winning_bids()
+    
+    ##############################
+    # N.B.: WE ARE DROPPING ROWS WITH NULL VALUES IN 'bid_timestamp_ms' COLUMN.
+    #       THIS IS BECAUSE WE ARE INTERESTED IN BIDS THAT WERE SUCCESSFUL.(NO BIDS WAS MARKED AS BLUE ON PAYLOAD.DE)
+    #       EXAMPLE: https://payload.de/data/18326108/
+    #       BIDS THAT WERE NOT SUCCESSFUL WILL NOT HAVE A TIMESTAMP.
+    ##############################
+    df = df.dropna(subset=['bid_timestamp_ms'])
     
     df.loc[:,'org_bid_timestamp_ms'] = df['bid_timestamp_ms']
         
@@ -68,6 +76,7 @@ def get_block_data_with_winning_bids():
     
     # 计算时间差并且存储在新的 Dataframe 中 Calculate the time difference and store it in a new Dataframe.
     ts_diff_df = (df['block_datetime'] - df['bid_timestamp_ms']).apply(lambda x: x.total_seconds()) * 1000
+    ts_diff_df = ts_diff_df.apply(lambda x: 0 if abs(x) < 0.001 else x)
 
     # 添加新的列到原始的 Dataframe 中.  Add a new column, ts_diff, as ms difference, to the original Dataframe.
     # if ts_diff > 0, bid before 12s, if ts_diff<0, bid after 12s
@@ -77,11 +86,14 @@ def get_block_data_with_winning_bids():
 
     return df
 
-def get_builder_info():
+def get_builder_info(df_with_ts_diff):
     # prepare builder label data frame from the winning block data, these are the builders succeed in submitting bidding and building block or blocks.
     # We only need the latest builder label matching the pubkey
     # 首先对 'builder_pubkey' 和 'block_timestamp' 进行排序
-    df = get_block_data_with_winning_bids()
+    if (df_with_ts_diff is None):
+        df = get_block_data_with_winning_bids_having_bid_ts()
+    else:
+        df = df_with_ts_diff        
     df = df.sort_values(by=['builder_pubkey', 'block_timestamp'])
 
     # 然后，选择每一个 'builder_pubkey' 的最后一个 'builder_label'，并把这两列放入一个新的 DataFrame
@@ -96,4 +108,17 @@ def get_builder_info():
     missing_labels = pd.DataFrame({'builder_pubkey': not_in_df_builder_info['builder_pubkey'].unique(), 
                                 'builder_label': 'FAILED_UNKNOWN_BUILDERS'})
     df_builder_info = pd.concat([df_builder_info, missing_labels], ignore_index=True)
+    
+    # Add imposter builder labels. Based on: https://collective.flashbots.net/t/block-builder-profitability-research/2803
+    imposter = ['0xa95b3a3cfc35a77663d6a5a9ac133bf1b68b4118f7f7a6f4ec43b298211441d1ebd1a1063446fea18138e7ef6c1379b6',
+        '0xb61a17407826a0c7a20ce8a0e9c848350bb94bf258be9c40da0dafd5be83be240c3d24c901e1d4423cc2eb90703ff0bc',
+        '0xa003117a3befd6d4f4f5a6db633caf7a2038d3f195c97a6b83ce6760cbbb1c0d09c11c33286fb14eb64c33ffb47f93cf']
+    
+    df_builder_info.loc[df_builder_info['builder_pubkey'].isin(imposter), 'builder_label'] = 'IMPOSTER ' + df_builder_info['builder_label']
+
+    
     return df_builder_info
+
+
+def replace_small_values(value):
+    return 0 if abs(value) < 0.001 else value
