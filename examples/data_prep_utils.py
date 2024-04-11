@@ -25,8 +25,9 @@ def get_titan_won_921_blocks_bidding_data():
     dft = pd.read_parquet('titan921.parquet', engine='pyarrow')
     return dft
     
-    
-def get_block_data_with_winning_bids():
+
+
+def get_raw_block_data_with_winning_bids():
     # Load winning bid block history data
 #  !!!the data here is NOT THE LATEST FROM THE OG MEV DATA ALWAYS PROJECT. Go to: https://github.com/dataalways/mevboost-data to sync.
     base_path = '../data/'
@@ -52,6 +53,28 @@ def get_block_data_with_winning_bids():
     # drop relays that got the data late, only keep the earliest.
 
     df.reset_index(inplace=True, drop=True)
+    return df
+
+
+    
+def get_block_data_with_winning_bids():
+    # Load winning bid block history data
+    df = get_raw_block_data_with_winning_bids()
+    
+    df.loc[:,'org_bid_timestamp_ms'] = df['bid_timestamp_ms']
+        
+    df.loc[:,'bid_timestamp_ms'] = df['bid_timestamp_ms'].astype('int64') # 确保时间戳为整数
+    df.loc[:,'bid_timestamp_ms'] = pd.to_datetime(df['bid_timestamp_ms'], unit='ms')
+    
+    # 计算时间差并且存储在新的 Dataframe 中 Calculate the time difference and store it in a new Dataframe.
+    ts_diff_df = (df['block_datetime'] - df['bid_timestamp_ms']).apply(lambda x: x.total_seconds()) * 1000
+
+    # 添加新的列到原始的 Dataframe 中.  Add a new column, ts_diff, as ms difference, to the original Dataframe.
+    # if ts_diff > 0, bid before 12s, if ts_diff<0, bid after 12s
+    df = pd.concat([df, ts_diff_df.rename('ts_diff')], axis=1)
+    
+    df['ts_diff_secs'] = df['ts_diff'] / 1000
+
     return df
 
 def get_builder_info():
