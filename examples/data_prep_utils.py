@@ -66,7 +66,7 @@ def get_builder_info():
 
     # extract builder pubkeys from the 921 titan bidding data. Some of these builders NEVER built a block. 
     # We will use FAILED_UNKNOWN_BUILDERS as their label
-    dft_builder = dft[['builder_pubkey']].drop_duplicates()
+    dft_builder = df[['builder_pubkey']].drop_duplicates()
 
     # Find out the FAILED_UNKNOWN_BUILDERS, create a data frame for them and add the data frame to the overall builder data frame.
     not_in_df_builder_info = dft_builder[~dft_builder['builder_pubkey'].isin(df_builder_info['builder_pubkey'])]
