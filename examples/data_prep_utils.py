@@ -23,6 +23,22 @@ def get_titan_won_921_blocks_bidding_data():
     pd.options.display.float_format = '{:.0f}'.format
     # Read the titan 921 block bidding history parquet file
     dft = pd.read_parquet('titan921.parquet', engine='pyarrow')
+        
+    
+    dft.loc[:, 'block_timestamp'] = pd.to_datetime(dft['block_timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S', errors='coerce')
+    dft.loc[:, 'timestamp'] = pd.to_datetime(dft['timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+
+    
+    # 计算时间差并且存储在新的 Dataframe 中 Calculate the time difference and store it in a new Dataframe.
+    ts_diff_dft = (dft['block_timestamp'] - dft['timestamp']).apply(lambda x: x.total_seconds()) * 1000
+    ts_diff_dft = ts_diff_dft.apply(lambda x: 0 if abs(x) < 0.001 else x)
+
+    # 添加新的列到原始的 Dataframe 中.  Add a new column, ts_diff, as ms difference, to the original Dataframe.
+    # if ts_diff > 0, bid before 12s, if ts_diff<0, bid after 12s
+    dft = pd.concat([dft, ts_diff_dft.rename('ts_diff')], axis=1)
+    
+    dft['ts_diff_secs'] = dft['ts_diff'] / 1000
+
     return dft
     
 
