@@ -2,3 +2,4 @@ examples/titan921.parquet
 .DS_Store
 examples/__pycache__/data_prep_utils.cpython-312.pyc
 examples/Titan_March_blocks.csv
+examples/titan_march_blocks_builder_rewards.parquet

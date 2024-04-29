@@ -41,6 +41,14 @@ def get_titan_won_921_blocks_bidding_data():
 
     return dft
     
+def get_titan_march_blocks_with_to_and_from():
+    pd.options.display.float_format = '{:.0f}'.format
+    dft = pd.read_parquet('titan_march_blocks_builder_rewards.parquet', engine='pyarrow')
+    return dft
+
+def get_eigenphi_march_blocks_with_to_and_from():
+    df = pd.read_csv("eigenphi_march_block_builder_rewards.csv")
+    return df
 
 
 def get_raw_block_data_with_winning_bids():
