@@ -1,0 +1,21 @@
+Unified TX Categories,Correlation,Count
+Asset Transfer,0.25176749434192464,22.0
+Blue Chip Only Swap,0.14101840749414576,86.0
+Builder Payment,-0.093370905270393,54.0
+Complex Blue Chip Arb,-0.04551376589387064,121.0
+Complex Blue Chip Swap,-0.11669065803653109,41.0
+Complex Blue Chip Swap (Buy),-0.1456187987191215,85.0
+Complex Blue Chip Swap (Flashloan),-1.0,2.0
+Complex Blue Chip Swap (Sell),-0.08450548435459009,31.0
+Failed Swap,,1.0
+Liquidation,0.9999999999999999,2.0
+MEV BOT Call,,1.0
+Remove LIquidity and Borrow,,1.0
+Simple Blue Chip Arb,-0.004362412923667171,16.0
+Simple Blue Chip Swap (Buy),0.06414515395119881,131.0
+Simple Blue Chip Swap (Sell),-0.05068483742060289,38.0
+TG Complex Blue Chip Swap (Buy),0.16465703047639363,44.0
+TG Complex Blue Chip Swap (Sell),-0.607381072672418,3.0
+TG NFT Complex Blue Chip Swap (Buy),-0.9116107954976913,3.0
+TG NFT Simple Blue Chip Swap(Buy),-0.8532554271723854,5.0
+TG Simple Blue Chip Swap (Buy),-0.12414467809506237,45.0

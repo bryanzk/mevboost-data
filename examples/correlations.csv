@@ -1,0 +1,38 @@
+Unified TX Categories,0
+Approval,-0.49058271135452697
+Asset Transfer,-0.13828857768726363
+Blue Chip Only Swap,0.21484000772300882
+Builder Payment,-0.043172735285868985
+Complex 	Blue Chip Arb,
+Complex Blue Chip Arb,-0.06117593501779275
+Complex Blue Chip Only Swap,
+Complex Blue Chip SWAP(Buy),-0.21286670451820727
+Complex Blue Chip SWAP(Sell),-0.1353700213389524
+Complex Blue Chip Swap,-0.17352287144377657
+Complex Blue Chip Swap (Buy),-0.036427401376080144
+Complex Blue Chip Swap (Flashloan),-0.3752228195464464
+Complex Blue Chip Swap (Sell),-0.0837425794027177
+Distribution,
+Dividend Payment,
+Dividend Purchase,
+Empty with unknown method 0xd6110859,
+Empty with unknown method 0xf9df4b4d,
+Failed Swap,-0.26234162465076977
+Failed Transaction,0.20503827390165025
+Liquidation,0.9999999999999999
+MEV BOT Call,-0.9429109979933541
+Minting,
+Remove LIquidity and Borrow,-0.9999999999999998
+Simple Blue Chip Arb,-0.217094907590457
+Simple Blue Chip SWAP(Buy),-0.02973221153419596
+Simple Blue Chip SWAP(Sell),-0.020281462403165012
+Simple Blue Chip Swap (Buy),0.3909356512786296
+Simple Blue Chip Swap (Sell),-0.009668650605103177
+Simple Blue Chip Swap (Sell) ,
+Staking / Unstaking,-0.16369516637016204
+TG Complex Blue Chip Swap (Buy),0.16465703047639363
+TG Complex Blue Chip Swap (Sell),-0.607381072672418
+TG NFT Complex Blue Chip Swap(Buy),-0.9116107954976913
+TG NFT Simple Blue Chip Swap(Buy),-0.8532554271723854
+TG Simple Blue Chip Swap (Buy),-0.12414467809506237
+Wrap ETH,

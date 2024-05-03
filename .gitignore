@@ -4,3 +4,5 @@ examples/__pycache__/data_prep_utils.cpython-312.pyc
 examples/Titan_March_blocks.csv
 examples/titan_march_blocks_builder_rewards.parquet
 examples/titan_march_blocks_builder_rewards.parquet.zip
+examples/left.csv
+examples/0x6f1cdbbb4d53d226cf4b917bf768b94acbab6168.csv
