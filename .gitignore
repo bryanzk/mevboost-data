@@ -21,3 +21,5 @@ examples/avg_correlations_and_counts.csv
 examples/med_correlations_and_counts.csv
 examples/TxsAVG.csv
 examples/TxsMED.csv
+examples/result_txs.csv
+examples/top_txs.csv
