@@ -23,3 +23,6 @@ examples/TxsAVG.csv
 examples/TxsMED.csv
 examples/result_txs.csv
 examples/top_txs.csv
+examples/EigenPhiTop200.csv
+examples/TitanTop1288.csv
+examples/top_200_eigenphi.csv
