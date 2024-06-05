@@ -110,7 +110,7 @@ def get_block_data_with_winning_bids_having_bid_ts():
 
     return df
 
-def get_builder_info(df_with_ts_diff):
+def get_builder_info_from_dataalways_block(df_with_ts_diff):
     # prepare builder label data frame from the winning block data, these are the builders succeed in submitting bidding and building block or blocks.
     # We only need the latest builder label matching the pubkey
     # 首先对 'builder_pubkey' 和 'block_timestamp' 进行排序
@@ -141,6 +141,12 @@ def get_builder_info(df_with_ts_diff):
     df_builder_info.loc[df_builder_info['builder_pubkey'].isin(imposter), 'builder_label'] = 'IMPOSTER ' + df_builder_info['builder_label']
 
     
+    return df_builder_info
+
+def get_builder_info_from_latest_TLDR_talk():
+    df_builder_info = pd.read_csv('Builder_Public_Keys.csv', usecols=['name', 'pubkey'])
+    df_builder_info = df_builder_info.rename(columns={'name': 'builder_label', 'pubkey': 'builder_pubkey'})
+    df_builder_info.sort_values(by='builder_label', inplace=True)
     return df_builder_info
 
 
