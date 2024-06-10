@@ -22,24 +22,101 @@ def get_titan_won_921_blocks_bidding_data():
     # Read 921 blocks' bidding data. Titan won these 921 blocks.
     pd.options.display.float_format = '{:.0f}'.format
     # Read the titan 921 block bidding history parquet file
-    dft = pd.read_parquet('titan921.parquet', engine='pyarrow')
+    df_bidding = pd.read_parquet('titan921.parquet', engine='pyarrow')
+    print(df_bidding.columns)
         
     
-    dft.loc[:, 'block_timestamp'] = pd.to_datetime(dft['block_timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S', errors='coerce')
-    dft.loc[:, 'timestamp'] = pd.to_datetime(dft['timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+    df_bidding.loc[:, 'block_timestamp'] = pd.to_datetime(df_bidding['block_timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S', errors='coerce')
+    df_bidding.loc[:, 'timestamp'] = pd.to_datetime(df_bidding['timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
 
     
     # 计算时间差并且存储在新的 Dataframe 中 Calculate the time difference and store it in a new Dataframe.
-    ts_diff_dft = (dft['block_timestamp'] - dft['timestamp']).apply(lambda x: x.total_seconds()) * 1000
+    ts_diff_dft = (df_bidding['block_timestamp'] - df_bidding['timestamp']).apply(lambda x: x.total_seconds()) * 1000
     ts_diff_dft = ts_diff_dft.apply(lambda x: 0 if abs(x) < 0.001 else x)
 
     # 添加新的列到原始的 Dataframe 中.  Add a new column, ts_diff, as ms difference, to the original Dataframe.
     # if ts_diff > 0, bid before 12s, if ts_diff<0, bid after 12s
-    dft = pd.concat([dft, ts_diff_dft.rename('ts_diff')], axis=1)
+    df_bidding = pd.concat([df_bidding, ts_diff_dft.rename('ts_diff')], axis=1)
     
-    dft['ts_diff_secs'] = dft['ts_diff'] / 1000
+    df_bidding['ts_diff_secs'] = df_bidding['ts_diff'] / 1000
+    
+    ## START processing builder labels
+    ## Bidding data has a lot of builder pubkeys presenting. We need to find out the builder labels for these pubkeys. 
+    ## Step 1: Get the builder labels from the matching blocks: inner join block number, left join builder_pubkey
+    ## Step 2: If builder labels are still None or NaN, then get the builder labels from the latest TLDR talk: left join builder_pubkey
+    ## Step 3: If builder labels are still None or NaN, then we use the first 8 hex chars from the pubkey and add "FAILED_" as the start of the label.
+   
+    df_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label()
+    
+    inner_merged_df = pd.merge(df_bidding, df_blocks_with_builder, on='block_number', how='inner')
 
-    return dft
+    # Step 2: Left join on builder_pubkey from the result of the inner join
+    result_df = pd.merge(inner_merged_df, df_blocks_with_builder[['builder_pubkey', 'builder_label']], on='builder_pubkey', how='left')
+
+    # Add org_builder_label column
+    result_df['org_builder_label'] = result_df['builder_label']
+
+    # Drop unnecessary columns if any
+    result_df = result_df.drop(['builder_label'], axis=1)
+    
+    
+    # ## Step 1: Get the builder labels from the matching blocks: inner join block number, left join builder_pubkey
+    # #  1: Inner join on block_number
+    # inner_merged_bidding_df = pd.merge(df_bidding, df_blocks_with_builder_for_innerjoin, on='block_number', how='inner', suffixes=('_bidding', '_block'))
+    
+    # #######  分步join 仍然有问题  #######  分步join 仍然有问题  #######  分步join 仍然有问题  #######  分步join 仍然有问题  
+    # ### maybe we can use 2 df to do the 2 join
+
+    # #  2: Left join on builder_pubkey from the result of the inner join
+    # result_df = pd.merge(inner_merged_bidding_df, df_blocks_with_builder_for_leftjoin[['builder_pubkey', 'builder_label']], on='builder_pubkey', how='left')
+
+    # # Add org_builder_label column
+    # result_df['org_builder_label'] = result_df['builder_label']
+
+    # # Drop unnecessary columns if any
+    # result_df = result_df.drop(['builder_label'], axis=1)
+
+
+    
+    
+    ## Step 2: If builder labels are still None or NaN, then get the builder labels from the latest TLDR talk: left join builder_pubkey
+    # Load latest TLDR builder info
+    df_tldr_builder_info = get_builder_info_from_latest_TLDR_talk()
+    df_bidding_with_new_builder_label = pd.merge(result_df, df_tldr_builder_info, how='left', on='builder_pubkey')
+
+    #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理
+    # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+    df_bidding_with_new_builder_label['tldr_builder_label'] = df_bidding_with_new_builder_label['builder_label']
+    df_bidding_with_new_builder_label = df_bidding_with_new_builder_label.drop('builder_label', axis=1)
+    
+    
+    # df_bidding_with_new_builder_label['builder_label'] = df_bidding_with_new_builder_label['org_builder_label'].fillna(df_bidding_with_new_builder_label['tldr_builder_label'])
+
+
+    # ## Step 3: If builder labels are still None or NaN, then we use the first 8 hex chars from the pubkey and add "FAILED_" as the start of the label.
+    # df_bidding_with_new_builder_label.loc[df_bidding_with_new_builder_label['builder_label'] == '', 'builder_label'] = 'FAILED_' + df_bidding_with_new_builder_label['builder_pubkey'].str[:10]
+    
+    
+    # # Merge the block data with the newest builder label data on builder's pubkeys. 
+    # # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
+    # df_with_new_builder_label = pd.merge(df_bidding, df_blocks_with_builder, how='left', on='builder_pubkey')
+    
+    # # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+    # df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
+    
+    # # We create a new builder_label column to store the final result of builder label. 
+    # # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
+    # # The value of "builder_label" follows logic as:
+    # # If a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label
+    # # If the pubkey can't matach any from TLDR, then use the existing one: org_builder_label.
+    # df_with_new_builder_label['builder_label'] = df_with_new_builder_label['tldr_builder_label'].fillna(df_with_new_builder_label['org_builder_label'])
+    
+    # # If the org_builder_label, the label in the dataalways project,  is "", then we use the first 8 hex chars from the pubkey.
+    # df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
+    
+    
+
+    return df_bidding_with_new_builder_label
     
 def get_titan_march_blocks_with_to_and_from():
     pd.options.display.float_format = '{:.0f}'.format
@@ -50,22 +127,30 @@ def get_eigenphi_march_blocks_with_to_and_from():
     df = pd.read_csv("eigenphi_march_block_builder_rewards.csv")
     return df
 
+# Get all the block data from the latest CSV from dataalways project, then process the builder label
+# ABOUT builder label:
+# If a pubkey of a builder can be found in the CSV imported from the latest set: https://bit.ly/3Vs16HU, then use the label from the CSV.
+# If the pubkey can't matach any from the csv, then use the existing one from dataalways project. 
+# If the label in the dataalways project is "", then we use the first 8 hex chars from the pubkey.
+def get_raw_block_data_with_winning_bids_and_latest_builder_label():
+##### STOP USING LOCAL DATA, USE THE CSV FILE INSTEAD
+#     # Load winning bid block history data
+# #  !!!the data here is NOT THE LATEST FROM THE OG MEV DATA ALWAYS PROJECT. Go to: https://github.com/dataalways/mevboost-data to sync.
+#     base_path = '../data/'
+#     file_paths = os.listdir(base_path)
 
-def get_raw_block_data_with_winning_bids():
-    # Load winning bid block history data
-#  !!!the data here is NOT THE LATEST FROM THE OG MEV DATA ALWAYS PROJECT. Go to: https://github.com/dataalways/mevboost-data to sync.
-    base_path = '../data/'
-    file_paths = os.listdir(base_path)
-
-    dfs = []
-    for file in file_paths:
-        if len(file) < 10: #.DS_store
-            continue
+#     dfs = []
+#     for file in file_paths:
+#         if len(file) < 10: #.DS_store
+#             continue
         
-        df_tmp = pd.read_parquet(os.path.join(base_path, file))
-        dfs.append(df_tmp)
+#         df_tmp = pd.read_parquet(os.path.join(base_path, file))
+#         dfs.append(df_tmp)
 
-    df = pd.concat(dfs)
+#     df = pd.concat(dfs)
+
+    df = get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV()
+    print(df.shape[0])
     df = df[df['payload_delivered'] == True]
     df.sort_values(by=['block_number', 'bid_timestamp_ms'], ascending=True, inplace=True)
     df.reset_index(inplace=True, drop=True)
@@ -77,13 +162,39 @@ def get_raw_block_data_with_winning_bids():
     # drop relays that got the data late, only keep the earliest.
 
     df.reset_index(inplace=True, drop=True)
-    return df
+    
+    
+    ## START PROCESSING BUILDER LABELS
+    # Rename the builder_label column as org_builder_label to prep for data merg
+    df.rename(columns={'builder_label': 'org_builder_label'}, inplace=True)
+    
+    # Load latest TLDR builder info
+    df_tldr_builder_info = get_builder_info_from_latest_TLDR_talk()
+    
+    # Merge the block data with the newest builder label data on builder's pubkeys. 
+    # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
+    df_with_new_builder_label = pd.merge(df, df_tldr_builder_info, how='left', on='builder_pubkey')
+    
+    # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+    df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
+    
+    # We create a new builder_label column to store the final result of builder label. 
+    # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
+    # The value of "builder_label" follows logic as:
+    # If a block's builder info already exists in the dataalways project, then use the existing one: org_builder_label.
+    # Otherwise, if a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label.
+    df_with_new_builder_label['builder_label'] = df_with_new_builder_label['org_builder_label'].fillna(df_with_new_builder_label['tldr_builder_label'])
+    
+    # Otherwise, if a block's builder pubkey has no label, then use the first 8 hex chars from the pubkey.
+    df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
+    print(df_with_new_builder_label.shape[0])
+    return df_with_new_builder_label
 
 
     
 def get_block_data_with_winning_bids_having_bid_ts():
     # Load winning bid block history data
-    df = get_raw_block_data_with_winning_bids()
+    df = get_raw_block_data_with_winning_bids_and_latest_builder_label()
     
     ##############################
     # N.B.: WE ARE DROPPING ROWS WITH NULL VALUES IN 'bid_timestamp_ms' COLUMN.
@@ -110,6 +221,40 @@ def get_block_data_with_winning_bids_having_bid_ts():
 
     return df
 
+
+def get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV():
+    return pd.read_csv("blocks_by_titan_19433573_to_19440930_with_builders.csv")
+
+def get_builder_info_by_df_block_numbers(df_block_number):
+    # Load winning bid block history data with builder info
+    df_full_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label()
+    
+    # merege_builder 
+    
+    df = df_full_blocks_with_builder[df_full_blocks_with_builder['block_number'].isin(df_block_number)]
+    
+    # Merge the block data with the newest builder label data on builder's pubkeys. 
+    # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
+    df_with_new_builder_label = pd.merge(df, df_builder_info, how='left', on='builder_pubkey')
+    
+    # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+    df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
+    
+    # We create a new builder_label column to store the final result of builder label. 
+    # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
+    # The value of "builder_label" follows logic as:
+    # If a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label
+    # If the pubkey can't matach any from TLDR, then use the existing one: org_builder_label.
+    df_with_new_builder_label['builder_label'] = df_with_new_builder_label['tldr_builder_label'].fillna(df_with_new_builder_label['org_builder_label'])
+    
+    # If the org_builder_label, the label in the dataalways project,  is "", then we use the first 8 hex chars from the pubkey.
+    df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
+    
+    return df_with_new_builder_label
+    
+
+
+
 def get_builder_info_from_dataalways_block(df_with_ts_diff):
     # prepare builder label data frame from the winning block data, these are the builders succeed in submitting bidding and building block or blocks.
     # We only need the latest builder label matching the pubkey
@@ -131,20 +276,11 @@ def get_builder_info_from_dataalways_block(df_with_ts_diff):
     not_in_df_builder_info = dft_builder[~dft_builder['builder_pubkey'].isin(df_builder_info['builder_pubkey'])]
     missing_labels = pd.DataFrame({'builder_pubkey': not_in_df_builder_info['builder_pubkey'].unique(), 
                                 'builder_label': 'FAILED_UNKNOWN_BUILDERS'})
-    df_builder_info = pd.concat([df_builder_info, missing_labels], ignore_index=True)
-    
-    # Add imposter builder labels. Based on: https://collective.flashbots.net/t/block-builder-profitability-research/2803
-    imposter = ['0xa95b3a3cfc35a77663d6a5a9ac133bf1b68b4118f7f7a6f4ec43b298211441d1ebd1a1063446fea18138e7ef6c1379b6',
-        '0xb61a17407826a0c7a20ce8a0e9c848350bb94bf258be9c40da0dafd5be83be240c3d24c901e1d4423cc2eb90703ff0bc',
-        '0xa003117a3befd6d4f4f5a6db633caf7a2038d3f195c97a6b83ce6760cbbb1c0d09c11c33286fb14eb64c33ffb47f93cf']
-    
-    df_builder_info.loc[df_builder_info['builder_pubkey'].isin(imposter), 'builder_label'] = 'IMPOSTER ' + df_builder_info['builder_label']
-
-    
+    df_builder_info = pd.concat([df_builder_info, missing_labels], ignore_index=True)    
     return df_builder_info
 
 def get_builder_info_from_latest_TLDR_talk():
-    df_builder_info = pd.read_csv('Builder_Public_Keys.csv', usecols=['name', 'pubkey'])
+    df_builder_info = pd.read_csv('TLDR_Builder_Public_Keys.csv', usecols=['name', 'pubkey'])
     df_builder_info = df_builder_info.rename(columns={'name': 'builder_label', 'pubkey': 'builder_pubkey'})
     df_builder_info.sort_values(by='builder_label', inplace=True)
     return df_builder_info
