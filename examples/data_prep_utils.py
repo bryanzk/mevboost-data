@@ -46,7 +46,7 @@ def get_titan_won_921_blocks_bidding_data():
     ## Step 2: If builder labels are still None or NaN, then get the builder labels from the latest TLDR talk: left join builder_pubkey
     ## Step 3: If builder labels are still None or NaN, then we use the first 8 hex chars from the pubkey and add "FAILED_" as the start of the label.
    
-    df_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label()
+    df_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV()
     
     inner_merged_df = pd.merge(df_bidding, df_blocks_with_builder, on='block_number', how='inner')
 
