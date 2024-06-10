@@ -127,68 +127,71 @@ def get_eigenphi_march_blocks_with_to_and_from():
     df = pd.read_csv("eigenphi_march_block_builder_rewards.csv")
     return df
 
-# Get all the block data from the latest CSV from dataalways project, then process the builder label
-# ABOUT builder label:
-# If a pubkey of a builder can be found in the CSV imported from the latest set: https://bit.ly/3Vs16HU, then use the label from the CSV.
-# If the pubkey can't matach any from the csv, then use the existing one from dataalways project. 
-# If the label in the dataalways project is "", then we use the first 8 hex chars from the pubkey.
-def get_raw_block_data_with_winning_bids_and_latest_builder_label():
-##### STOP USING LOCAL DATA, USE THE CSV FILE INSTEAD
-#     # Load winning bid block history data
-# #  !!!the data here is NOT THE LATEST FROM THE OG MEV DATA ALWAYS PROJECT. Go to: https://github.com/dataalways/mevboost-data to sync.
-#     base_path = '../data/'
-#     file_paths = os.listdir(base_path)
 
-#     dfs = []
-#     for file in file_paths:
-#         if len(file) < 10: #.DS_store
-#             continue
+
+####### NO NEED TO USE THIS ONE BECAUSE WE HAVE THE CSV FILE CONTAINING ONLY THE BLOCKS BUILT BY TITAN
+# # Get all the block data from the latest CSV from dataalways project, then process the builder label
+# # ABOUT builder label:
+# # If a pubkey of a builder can be found in the CSV imported from the latest set: https://bit.ly/3Vs16HU, then use the label from the CSV.
+# # If the pubkey can't matach any from the csv, then use the existing one from dataalways project. 
+# # If the label in the dataalways project is "", then we use the first 8 hex chars from the pubkey.
+# def get_raw_block_data_with_winning_bids_and_latest_builder_label():
+# ##### STOP USING LOCAL DATA, USE THE CSV FILE INSTEAD
+# #     # Load winning bid block history data
+# # #  !!!the data here is NOT THE LATEST FROM THE OG MEV DATA ALWAYS PROJECT. Go to: https://github.com/dataalways/mevboost-data to sync.
+# #     base_path = '../data/'
+# #     file_paths = os.listdir(base_path)
+
+# #     dfs = []
+# #     for file in file_paths:
+# #         if len(file) < 10: #.DS_store
+# #             continue
         
-#         df_tmp = pd.read_parquet(os.path.join(base_path, file))
-#         dfs.append(df_tmp)
+# #         df_tmp = pd.read_parquet(os.path.join(base_path, file))
+# #         dfs.append(df_tmp)
 
-#     df = pd.concat(dfs)
+# #     df = pd.concat(dfs)
 
-    df = get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV()
-    print(df.shape[0])
-    df = df[df['payload_delivered'] == True]
-    df.sort_values(by=['block_number', 'bid_timestamp_ms'], ascending=True, inplace=True)
-    df.reset_index(inplace=True, drop=True)
+#     df = get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV()
+#     print(df.shape[0])
+#     df = df[df['payload_delivered'] == True]
+#     df.sort_values(by=['block_number', 'bid_timestamp_ms'], ascending=True, inplace=True)
+#     df.reset_index(inplace=True, drop=True)
 
-    df.dropna(subset='relay', inplace=True)
-    # drop non-boost blocks
+#     df.dropna(subset='relay', inplace=True)
+#     # drop non-boost blocks
 
-    df.drop_duplicates(subset='block_hash', keep='first', inplace=True)
-    # drop relays that got the data late, only keep the earliest.
+#     df.drop_duplicates(subset='block_hash', keep='first', inplace=True)
+#     # drop relays that got the data late, only keep the earliest.
 
-    df.reset_index(inplace=True, drop=True)
+#     df.reset_index(inplace=True, drop=True)
     
     
-    ## START PROCESSING BUILDER LABELS
-    # Rename the builder_label column as org_builder_label to prep for data merg
-    df.rename(columns={'builder_label': 'org_builder_label'}, inplace=True)
+#     ## START PROCESSING BUILDER LABELS
+#     # Rename the builder_label column as org_builder_label to prep for data merg
+#     df.rename(columns={'builder_label': 'org_builder_label'}, inplace=True)
     
-    # Load latest TLDR builder info
-    df_tldr_builder_info = get_builder_info_from_latest_TLDR_talk()
+#     # Load latest TLDR builder info
+#     df_tldr_builder_info = get_builder_info_from_latest_TLDR_talk()
     
-    # Merge the block data with the newest builder label data on builder's pubkeys. 
-    # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
-    df_with_new_builder_label = pd.merge(df, df_tldr_builder_info, how='left', on='builder_pubkey')
+#     # Merge the block data with the newest builder label data on builder's pubkeys. 
+#     # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
+#     df_with_new_builder_label = pd.merge(df, df_tldr_builder_info, how='left', on='builder_pubkey')
     
-    # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
-    df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
+#     # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+#     df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
     
-    # We create a new builder_label column to store the final result of builder label. 
-    # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
-    # The value of "builder_label" follows logic as:
-    # If a block's builder info already exists in the dataalways project, then use the existing one: org_builder_label.
-    # Otherwise, if a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label.
-    df_with_new_builder_label['builder_label'] = df_with_new_builder_label['org_builder_label'].fillna(df_with_new_builder_label['tldr_builder_label'])
+#     # We create a new builder_label column to store the final result of builder label. 
+#     # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
+#     # The value of "builder_label" follows logic as:
+#     # If a block's builder info already exists in the dataalways project, then use the existing one: org_builder_label.
+#     # Otherwise, if a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label.
+#     df_with_new_builder_label['builder_label'] = df_with_new_builder_label['org_builder_label'].fillna(df_with_new_builder_label['tldr_builder_label'])
     
-    # Otherwise, if a block's builder pubkey has no label, then use the first 8 hex chars from the pubkey.
-    df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
-    print(df_with_new_builder_label.shape[0])
-    return df_with_new_builder_label
+#     # Otherwise, if a block's builder pubkey has no label, then use the first 8 hex chars from the pubkey.
+#     df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
+#     print(df_with_new_builder_label.shape[0])
+#     return df_with_new_builder_label
 
 
     
@@ -225,32 +228,32 @@ def get_block_data_with_winning_bids_having_bid_ts():
 def get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV():
     return pd.read_csv("blocks_by_titan_19433573_to_19440930_with_builders.csv")
 
-def get_builder_info_by_df_block_numbers(df_block_number):
-    # Load winning bid block history data with builder info
-    df_full_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label()
+# def get_builder_info_by_df_block_numbers(df_block_number):
+#     # Load winning bid block history data with builder info
+#     df_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label()
     
-    # merege_builder 
+#     # merege_builder 
     
-    df = df_full_blocks_with_builder[df_full_blocks_with_builder['block_number'].isin(df_block_number)]
+#     df = df_blocks_with_builder[df_blocks_with_builder['block_number'].isin(df_block_number)]
     
-    # Merge the block data with the newest builder label data on builder's pubkeys. 
-    # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
-    df_with_new_builder_label = pd.merge(df, df_builder_info, how='left', on='builder_pubkey')
+#     # Merge the block data with the newest builder label data on builder's pubkeys. 
+#     # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
+#     df_with_new_builder_label = pd.merge(df, df_builder_info, how='left', on='builder_pubkey')
     
-    # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
-    df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
+#     # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
+#     df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
     
-    # We create a new builder_label column to store the final result of builder label. 
-    # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
-    # The value of "builder_label" follows logic as:
-    # If a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label
-    # If the pubkey can't matach any from TLDR, then use the existing one: org_builder_label.
-    df_with_new_builder_label['builder_label'] = df_with_new_builder_label['tldr_builder_label'].fillna(df_with_new_builder_label['org_builder_label'])
+#     # We create a new builder_label column to store the final result of builder label. 
+#     # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
+#     # The value of "builder_label" follows logic as:
+#     # If a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label
+#     # If the pubkey can't matach any from TLDR, then use the existing one: org_builder_label.
+#     df_with_new_builder_label['builder_label'] = df_with_new_builder_label['tldr_builder_label'].fillna(df_with_new_builder_label['org_builder_label'])
     
-    # If the org_builder_label, the label in the dataalways project,  is "", then we use the first 8 hex chars from the pubkey.
-    df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
+#     # If the org_builder_label, the label in the dataalways project,  is "", then we use the first 8 hex chars from the pubkey.
+#     df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
     
-    return df_with_new_builder_label
+#     return df_with_new_builder_label
     
 
 
