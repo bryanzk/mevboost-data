@@ -42,7 +42,7 @@ def get_titan_won_921_blocks_bidding_data():
     
     df_builder_from_tldr = get_builder_info_from_latest_TLDR_talk()
 
-    inner_merged_df = pd.merge(df_bidding, df_builder_from_tldr, on='builder_pubkey', how='left', suffixes=('_bidding', '_tldr'))
+    inner_merged_df = pd.merge(df_bidding, df_builder_from_tldr, on='builder_pubkey', how='left')
 
 
     print('bidding - columns - after merge on block number:')
@@ -52,10 +52,16 @@ def get_titan_won_921_blocks_bidding_data():
     print( inner_merged_df.shape[0])
     print('bidding - empty builder label rows - after merge on block number:' )
     print(inner_merged_df['builder_label'].isna().sum())
+    print('bidding - TLDR filled builder label counts - after merge on block number:' )
+    print(inner_merged_df['builder_label'].nunique())
+    
 
 
     inner_merged_df.loc[inner_merged_df['builder_label'].isna()==True, 'builder_label'] = "FAILED_BUILDER_"+ inner_merged_df['builder_pubkey'].str[:10]
 
+    print('bidding - TLDR filled builder label counts - after merge on block number and fillna:' )
+    print(inner_merged_df['builder_label'].nunique())
+    
     print('bidding - empty builder label rows - after merge on block number and fillna:' )
     print(inner_merged_df['builder_label'].isna().sum())
     df_bidding = inner_merged_df
