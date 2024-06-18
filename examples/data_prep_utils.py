@@ -24,11 +24,9 @@ def get_titan_won_921_blocks_bidding_data():
     # Read the titan 921 block bidding history parquet file
     df_bidding = pd.read_parquet('titan921.parquet', engine='pyarrow')
     print(df_bidding.columns)
-        
     
     df_bidding.loc[:, 'block_timestamp'] = pd.to_datetime(df_bidding['block_timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S', errors='coerce')
     df_bidding.loc[:, 'timestamp'] = pd.to_datetime(df_bidding['timestamp'].str.replace(' UTC', ''), format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
-
     
     # 计算时间差并且存储在新的 Dataframe 中 Calculate the time difference and store it in a new Dataframe.
     ts_diff_dft = (df_bidding['block_timestamp'] - df_bidding['timestamp']).apply(lambda x: x.total_seconds()) * 1000
@@ -44,7 +42,6 @@ def get_titan_won_921_blocks_bidding_data():
 
     inner_merged_df = pd.merge(df_bidding, df_builder_from_tldr, on='builder_pubkey', how='left')
 
-
     print('bidding - columns - after merge on block number:')
 
     print(inner_merged_df.columns)
@@ -54,8 +51,6 @@ def get_titan_won_921_blocks_bidding_data():
     print(inner_merged_df['builder_label'].isna().sum())
     print('bidding - TLDR filled builder label counts - after merge on block number:' )
     print(inner_merged_df['builder_label'].nunique())
-    
-
 
     inner_merged_df.loc[inner_merged_df['builder_label'].isna()==True, 'builder_label'] = "FAILED_BUILDER_"+ inner_merged_df['builder_pubkey'].str[:10]
 
@@ -67,80 +62,7 @@ def get_titan_won_921_blocks_bidding_data():
     df_bidding = inner_merged_df
     return df_bidding
 
-    # ## START processing builder labels
-    # ## Bidding data has a lot of builder pubkeys presenting. We need to find out the builder labels for these pubkeys. 
-    # ## Step 1: Get the builder labels from the matching blocks: inner join block number, left join builder_pubkey
-    # ## Step 2: If builder labels are still None or NaN, then get the builder labels from the latest TLDR talk: left join builder_pubkey
-    # ## Step 3: If builder labels are still None or NaN, then we use the first 8 hex chars from the pubkey and add "FAILED_" as the start of the label.
-   
-    # df_blocks_with_builder = get_raw_block_data_with_winning_bids_and_latest_builder_label_from_CSV()
-    
-    # inner_merged_df = pd.merge(df_bidding, df_blocks_with_builder, on='block_number', how='inner')
-
-    # # Step 2: Left join on builder_pubkey from the result of the inner join
-    # result_df = pd.merge(inner_merged_df, df_blocks_with_builder[['builder_pubkey', 'builder_label']], on='builder_pubkey', how='left')
-
-    # # Add org_builder_label column
-    # result_df['org_builder_label'] = result_df['builder_label']
-
-    # # Drop unnecessary columns if any
-    # result_df = result_df.drop(['builder_label'], axis=1)
-    
-    
-    # # ## Step 1: Get the builder labels from the matching blocks: inner join block number, left join builder_pubkey
-    # # #  1: Inner join on block_number
-    # # inner_merged_bidding_df = pd.merge(df_bidding, df_blocks_with_builder_for_innerjoin, on='block_number', how='inner', suffixes=('_bidding', '_block'))
-    
-    # # #######  分步join 仍然有问题  #######  分步join 仍然有问题  #######  分步join 仍然有问题  #######  分步join 仍然有问题  
-    # # ### maybe we can use 2 df to do the 2 join
-
-    # # #  2: Left join on builder_pubkey from the result of the inner join
-    # # result_df = pd.merge(inner_merged_bidding_df, df_blocks_with_builder_for_leftjoin[['builder_pubkey', 'builder_label']], on='builder_pubkey', how='left')
-
-    # # # Add org_builder_label column
-    # # result_df['org_builder_label'] = result_df['builder_label']
-
-    # # # Drop unnecessary columns if any
-    # # result_df = result_df.drop(['builder_label'], axis=1)
-
-
-    
-    
-    # ## Step 2: If builder labels are still None or NaN, then get the builder labels from the latest TLDR talk: left join builder_pubkey
-    # # Load latest TLDR builder info
-    # df_tldr_builder_info = get_builder_info_from_latest_TLDR_talk()
-    # df_bidding_with_new_builder_label = pd.merge(result_df, df_tldr_builder_info, how='left', on='builder_pubkey')
-
-    # #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理  #######  后面的builder label 取值仍然需要处理
-    # # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
-    # df_bidding_with_new_builder_label['tldr_builder_label'] = df_bidding_with_new_builder_label['builder_label']
-    # df_bidding_with_new_builder_label = df_bidding_with_new_builder_label.drop('builder_label', axis=1)
-    
-    
-    # # df_bidding_with_new_builder_label['builder_label'] = df_bidding_with_new_builder_label['org_builder_label'].fillna(df_bidding_with_new_builder_label['tldr_builder_label'])
-
-
-    # # ## Step 3: If builder labels are still None or NaN, then we use the first 8 hex chars from the pubkey and add "FAILED_" as the start of the label.
-    # # df_bidding_with_new_builder_label.loc[df_bidding_with_new_builder_label['builder_label'] == '', 'builder_label'] = 'FAILED_' + df_bidding_with_new_builder_label['builder_pubkey'].str[:10]
-    
-    
-    # # # Merge the block data with the newest builder label data on builder's pubkeys. 
-    # # # We are using "LEFT" join because that some of pubkeys are not in the latest builder data
-    # # df_with_new_builder_label = pd.merge(df_bidding, df_blocks_with_builder, how='left', on='builder_pubkey')
-    
-    # # # After the join, the builder_label column now is from the TLDR data, we rename it as tldr_builder_label.
-    # # df_with_new_builder_label.rename(columns={'builder_label': 'tldr_builder_label'}, inplace=True)
-    
-    # # # We create a new builder_label column to store the final result of builder label. 
-    # # # This would prevent the coupling of reference places, which can always use "builder_label" to access the latest data. 
-    # # # The value of "builder_label" follows logic as:
-    # # # If a pubkey of a builder can be found in the TLDR data, then use the TLDR builder label
-    # # # If the pubkey can't matach any from TLDR, then use the existing one: org_builder_label.
-    # # df_with_new_builder_label['builder_label'] = df_with_new_builder_label['tldr_builder_label'].fillna(df_with_new_builder_label['org_builder_label'])
-    
-    # # # If the org_builder_label, the label in the dataalways project,  is "", then we use the first 8 hex chars from the pubkey.
-    # # df_with_new_builder_label.loc[df_with_new_builder_label['builder_label'] == '', 'builder_label'] = df_with_new_builder_label['builder_pubkey'].str[:10]
-    
+ 
     
     
 def get_titan_march_blocks_with_to_and_from():
