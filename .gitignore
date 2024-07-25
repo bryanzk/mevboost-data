@@ -57,3 +57,5 @@ __azurite_db_table__.json
 .DS_Store
 .DS_Store
 examples/tx_block_20207941_to_20229426.csv
+examples/bids.csv
+examples/block.csv
